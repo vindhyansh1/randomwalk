@@ -28,37 +28,54 @@ def fillupmat(nodeid):
 
     #assigning gender
     feature_file = open(str(nodeid)+'.feat','r')
-    feature_names_file = open(str(nodeid)+'.feat','r')
+    ego_feature_file = open(str(nodeid)+'.egofeat','r')
+    feature_names_file = open(str(nodeid)+'.featnames','r')
     gender_index = 77
     for line in feature_names_file:
         if line.split(' ')[1].split(';')[0] == 'gender':
-            gender_index = line.split(' ')[0]
+            gender_index = int(line.split(' ')[0])
             break
     
     count_gender77 = 0
     count_gender78 = 0
     for row in feature_file:
         feature_data = row.split(' ')
-        nodeid = feature_data[0]
-        if row[gender_index+1] == 1:
-            gender_list[nodeid] = 77
+        node = int(feature_data[0])
+        if row[gender_index+1] == '1':
+            gender_list[node] = 77
             count_gender77+=1
         else:
-            gender_list[nodeid] = 78
+            gender_list[node] = 78
             count_gender78 += 1
     
     gender_dist[nodeid] = (count_gender77,count_gender78)
+    #assigning gender to ego node
+    row = ego_feature_file.readline()
+    feature_data = row.split(' ')
+    node = int(feature_data[0])
+    if row[gender_index+1] == '1':
+            gender_list[node] = 77
+    else:
+            gender_list[node] = 78
 
 def get_gender_wise_neighbours(adj_list):
     for nodeid in range(len(adj_list)):
         gender77_list = []
         gender78_list = []
-        for neighbourid in adj_list:
-            if(gender_list[neighbourid]==77):
-                gender77_list.append(neighbourid)
+        for i in range(len(adj_list[nodeid])):
+            if(gender_list[adj_list[nodeid][i]]==77):
+                gender77_list.append(i)
             else:
-                gender78_list.append(neighbourid)
-        gender_wise_neighbour_indices.append((gender77_list,gender78_list)) 
+                gender78_list.append(i)
+        gender_wise_neighbour_indices.append((gender77_list,gender78_list))
+
+def get_gender_dist(adj_list):
+    for i in range(len(adj_list)):
+        count_gender77 = len(gender_wise_neighbour_indices[i][0])
+        count_gender78 = len(gender_wise_neighbour_indices[i][1])
+        gender_dist[i] = (count_gender77,count_gender78)
+
+
 
 def fairwalk(adj_list,walk_len,walk_num):
     fairwalk_traces = []
@@ -67,20 +84,21 @@ def fairwalk(adj_list,walk_len,walk_num):
         for j in range(walk_num):
             walk = []
             current_node = nodeid
+            prev_node = nodeid
             for step in range(walk_len):
-                prob_77 = gender_dist[current_node][0]/(gender_dist[current_node][0] + gender_dist[current_node][1])
-                r = np.random.random()
+                r = np.random.randint(77,79)
                 try:
-                    if r<=prob_77:
+                    if r==77:
                         group77_neighbours = gender_wise_neighbour_indices[current_node][0]
                         random_neighbor = np.random.choice(group77_neighbours)
                     else:
                         group78_neighbours = gender_wise_neighbour_indices[current_node][1]
                         random_neighbor = np.random.choice(group78_neighbours)
+                    walk.append(adj_list[current_node][random_neighbor])
+                    prev_node = current_node
+                    current_node = adj_list[current_node][random_neighbor]
                 except:
-                    random_neighbor = 0
-                walk.append(adj_list[current_node][random_neighbor])
-                current_node = adj_list[current_node][random_neighbor]
+                    random_neighbor = current_node
             traces.append(walk)
         fairwalk_traces.append(traces)
     return fairwalk_traces
@@ -91,7 +109,10 @@ def main():
         fillupmat(ego_node)
     
     get_gender_wise_neighbours(adj_list)
-    fairwalk(adj_list,5,1)
+    get_gender_dist(adj_list)
+    
+    fair_traces = fairwalk(adj_list,5,2)
+    print(fair_traces[0:10])
     
     
 if __name__ == '__main__':
