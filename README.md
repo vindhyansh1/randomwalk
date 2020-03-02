@@ -1,7 +1,7 @@
 # randomwalk
 
 # Dataset Used:
-facebook ego network
+<a href="http://snap.stanford.edu/data/ego-Facebook.html">facebook ego network</a>
 
 # DataStructures Used:
 <p><b>adj_list :</b> Adjacancy List (Python List of Lists) to store Network (graph).</p>
