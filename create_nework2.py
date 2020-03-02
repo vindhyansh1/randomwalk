@@ -11,8 +11,8 @@ def fillupmat(nodeid):
     circle_file = open(str(nodeid)+".circles",'r')
     y=[]
     for circle in circle_file:
-        x=re.split('[ \t]+',circle)
-        y+=[int(a) for a in x[1:-1]]
+        x=re.split(r'[ \t]+',circle)
+        y+=[int(a) for a in x[1:]]
 
     for i in y:
         adj_list[nodeid].append(i)
@@ -41,7 +41,7 @@ def fillupmat(nodeid):
     for row in feature_file:
         feature_data = row.split(' ')
         node = int(feature_data[0])
-        if row[gender_index+1] == '1':
+        if feature_data[gender_index+1] == '1':
             gender_list[node] = 77
             count_gender77+=1
         else:
@@ -80,27 +80,33 @@ def get_gender_dist(adj_list):
 def fairwalk(adj_list,walk_len,walk_num):
     fairwalk_traces = []
     for nodeid in range(len(adj_list)):
-        traces = []
-        for j in range(walk_num):
-            walk = []
-            current_node = nodeid
-            prev_node = nodeid
-            for step in range(walk_len):
-                r = np.random.randint(77,79)
-                try:
-                    if r==77:
-                        group77_neighbours = gender_wise_neighbour_indices[current_node][0]
-                        random_neighbor = np.random.choice(group77_neighbours)
-                    else:
-                        group78_neighbours = gender_wise_neighbour_indices[current_node][1]
-                        random_neighbor = np.random.choice(group78_neighbours)
+        if len(adj_list[nodeid]) != 0:
+            traces = []
+            for j in range(walk_num):
+                walk = []
+                current_node = nodeid
+                for step in range(walk_len):
+                    r = np.random.randint(77,79)
+                    random_neighbor = None
+                    try:
+                        if r==77:
+                            group77_neighbours = gender_wise_neighbour_indices[current_node][0]
+                            if len(group77_neighbours) == 0:
+                                random_neighbor = np.random.choice(gender_wise_neighbour_indices[current_node][1])
+                            else:
+                                random_neighbor = np.random.choice(group77_neighbours)
+                        else:
+                            group78_neighbours = gender_wise_neighbour_indices[current_node][1]
+                            if len(group78_neighbours) == 0:
+                                random_neighbor = np.random.choice(gender_wise_neighbour_indices[current_node][0])
+                            else:
+                                random_neighbor = np.random.choice(group78_neighbours)
+                    except:
+                        pass
                     walk.append(adj_list[current_node][random_neighbor])
-                    prev_node = current_node
                     current_node = adj_list[current_node][random_neighbor]
-                except:
-                    random_neighbor = current_node
-            traces.append(walk)
-        fairwalk_traces.append(traces)
+                traces.append(walk)
+            fairwalk_traces.append(traces)
     return fairwalk_traces
 
 def main():
@@ -110,10 +116,9 @@ def main():
     
     get_gender_wise_neighbours(adj_list)
     get_gender_dist(adj_list)
-    
-    fair_traces = fairwalk(adj_list,5,2)
-    print(fair_traces[0:10])
-    
-    
+    fair_traces = fairwalk(adj_list,6,2)
+    print(fair_traces[:10])
+
+
 if __name__ == '__main__':
     main()
